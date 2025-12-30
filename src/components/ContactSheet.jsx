@@ -120,7 +120,7 @@ export default function ContactSheet({
     const loadedTextures = useTexture(allSheets.map(s => s.texture))
 
     // Load Frame Texture for the overlay
-    const frameTexture = useTexture('/textures/contact_sheet_frame.png')
+    const frameTexture = useTexture('textures/contact_sheet_frame.png')
     frameTexture.colorSpace = THREE.SRGBColorSpace
 
     const getTexture = (url) => {

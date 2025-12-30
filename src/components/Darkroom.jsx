@@ -19,7 +19,7 @@ const MATERIAL_COLORS = {
 }
 
 export default function Darkroom() {
-    const { scene } = useGLTF('/models/darkroom.glb')
+    const { scene } = useGLTF('models/darkroom.glb')
 
     // Clone the scene to avoid modifying the cached original
     const clonedScene = useMemo(() => scene.clone(true), [scene])
@@ -120,4 +120,4 @@ export default function Darkroom() {
 }
 
 // Preload the model
-useGLTF.preload('/models/darkroom.glb')
+useGLTF.preload('models/darkroom.glb')
