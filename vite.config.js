@@ -5,5 +5,5 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
     plugins: [react()],
     assetsInclude: ['**/*.glb'],
-    base: './', // Ensures assets load correctly if hosted in a subdirectory
+    base: '/2025inreview/', // Matches repository name for GitHub Pages
 })

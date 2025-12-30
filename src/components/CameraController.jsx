@@ -1,5 +1,5 @@
 // src/components/CameraController.jsx
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { PerspectiveCamera } from '@react-three/drei'
 import * as THREE from 'three'
@@ -65,6 +65,19 @@ export default function CameraController() {
     const currentTray = useStore(state => state.currentTray)
     const currentPhotoPosition = useStore(state => state.currentPhotoPosition)
     const lightsOn = useStore(state => state.lightsOn)
+
+    const [isRotated, setIsRotated] = useState(false)
+
+    // Handle rotation toggle
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                setIsRotated(prev => !prev)
+            }
+        }
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [])
 
     // Track mouse movement
     useEffect(() => {
@@ -133,7 +146,11 @@ export default function CameraController() {
 
         // Determine Up vector
         const isTopDown = cameraTarget === 'photo'
-        const targetUp = isTopDown ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 1, 0)
+        let targetUp = isTopDown ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 1, 0)
+
+        if (isRotated) {
+            targetUp = new THREE.Vector3(-1, 0, 0)
+        }
 
         // Helper to animate vector
         const currentUp = cameraRef.current.up.clone()
@@ -183,7 +200,7 @@ export default function CameraController() {
             }
         })
 
-    }, [cameraTarget, currentTray, currentPhotoPosition, lightsOn])
+    }, [cameraTarget, currentTray, currentPhotoPosition, lightsOn, isRotated])
 
     // Update camera lookAt with FPS-style mouse look every frame
     useFrame((state) => {
