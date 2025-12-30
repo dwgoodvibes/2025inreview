@@ -81,7 +81,7 @@ const useStore = create((set, get) => ({
         {
             id: 0,
             category: 'Spring',
-            texture: '/sheets/summer_sheet.webp?v=2', // Using generated sheet for now
+            texture: '/sheets/summer_sheet.webp?v=5', // Using generated sheet for now
             photos: Array.from({ length: 10 }, (_, i) => ({
                 id: i,
                 title: `Spring Memory ${i + 1}`,
@@ -92,7 +92,7 @@ const useStore = create((set, get) => ({
         {
             id: 1,
             category: 'Summer',
-            texture: '/sheets/summer_sheet.webp?v=2',
+            texture: '/sheets/summer_sheet.webp?v=5',
             photos: Array.from({ length: 10 }, (_, i) => ({
                 id: i,
                 title: `Summer Adventure ${i + 1}`,
@@ -103,7 +103,7 @@ const useStore = create((set, get) => ({
         {
             id: 2,
             category: 'Fall',
-            texture: '/sheets/summer_sheet.webp?v=2', // Using generated sheet for now
+            texture: '/sheets/summer_sheet.webp?v=5', // Using generated sheet for now
             photos: Array.from({ length: 10 }, (_, i) => ({
                 id: i,
                 title: `Autumn Moment ${i + 1}`,
