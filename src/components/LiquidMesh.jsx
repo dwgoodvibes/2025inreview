@@ -11,9 +11,9 @@ const LiquidMaterial = shaderMaterial(
     // Uniforms
     {
         uTime: 0,
-        uColor: new THREE.Color('#080a0b'), // Very dark, ink-like
-        uOpacity: 0.6, // More transparent
-        uRippleIntensity: 0.1,
+        uColor: new THREE.Color('#050607'), // Even darker, ink-like
+        uOpacity: 0.85, // Less transparent, more visible
+        uRippleIntensity: 0.15,
         uAgitation: 0,
     },
     // Vertex shader
@@ -82,16 +82,16 @@ const LiquidMaterial = shaderMaterial(
             // Edge-following ripples
             float edgeRipple = sin(atan(center.y, center.x) * 12.0 + uTime * 2.0) * 0.5 + 0.5;
             
-            // Combine ripples - stronger near edges
-            float rippleEffect = (ripple1 * 0.3 + ripple2 * 0.25 + edgeRipple * 0.2);
-            rippleEffect *= edgeProximity * 0.4;
+            // Combine ripples - stronger near edges (more pronounced)
+            float rippleEffect = (ripple1 * 0.5 + ripple2 * 0.4 + edgeRipple * 0.35);
+            rippleEffect *= edgeProximity * 0.6;
             
             // Base color
             vec3 color = uColor;
             
             // Specular highlights only (no colored glow)
-            // Just subtle white sheen on peaks
-            float highlight = rippleEffect * 0.15;
+            // More prominent white sheen on peaks
+            float highlight = rippleEffect * 0.35;
             color += vec3(highlight);
             
             // Soft edge fade

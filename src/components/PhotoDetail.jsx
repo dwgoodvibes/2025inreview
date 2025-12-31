@@ -28,42 +28,7 @@ export default function PhotoDetail() {
             >
                 {/* Metadata text removed as per user request */}
 
-                <button
-                    className="back-button"
-                    onClick={clearPhoto}
-                    style={{
-                        position: 'fixed',
-                        top: '2rem',
-                        left: '2rem',
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#ff5e00',
-                        fontFamily: 'Georgia, serif',
-                        fontSize: '1rem',
-                        cursor: 'pointer',
-                        padding: '0.5rem 1rem',
-                        transition: 'opacity 0.3s ease',
-                        letterSpacing: '0.05em',
-                        pointerEvents: 'auto' // Re-enable clicks for the button
-                    }}
-                    onMouseEnter={(e) => e.target.style.opacity = 0.7}
-                    onMouseLeave={(e) => e.target.style.opacity = 1}
-                >
-                    ← Back to sheet
-                </button>
-
-                <p
-                    style={{
-                        position: 'fixed',
-                        top: '2rem',
-                        right: '2rem',
-                        color: 'rgba(255, 94, 0, 0.5)',
-                        fontFamily: 'Georgia, serif',
-                        fontSize: '0.75rem'
-                    }}
-                >
-                    Press ESC to return
-                </p>
+                {/* Navigation text removed */}
             </div>
 
             <style>{`

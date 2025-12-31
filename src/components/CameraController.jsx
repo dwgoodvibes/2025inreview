@@ -67,17 +67,26 @@ export default function CameraController() {
     const lightsOn = useStore(state => state.lightsOn)
 
     const [isRotated, setIsRotated] = useState(false)
+    const zoomPositionRef = useRef(null)  // Store the original zoom position
 
-    // Handle rotation toggle
+    // Reset rotation when leaving photo mode
+    useEffect(() => {
+        if (cameraTarget !== 'photo') {
+            setIsRotated(false)
+            zoomPositionRef.current = null
+        }
+    }, [cameraTarget])
+
+    // Handle rotation toggle - only when zoomed in
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.key === 'r' || e.key === 'R') {
+            if ((e.key === 'r' || e.key === 'R') && cameraTarget === 'photo') {
                 setIsRotated(prev => !prev)
             }
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [])
+    }, [cameraTarget])
 
     // Track mouse movement
     useEffect(() => {
@@ -98,26 +107,41 @@ export default function CameraController() {
         let targetConfig
 
         if (cameraTarget === 'photo') {
-            // Simple zoom: move toward wherever the crosshair is currently pointing
-            // Get the current world position of the rig and the look target
-            const currentPos = rigRef.current.position.clone()
-            const lookTarget = targetRef.current.clone()
+            // Only calculate zoom position on first entry (not on rotation toggle)
+            if (!zoomPositionRef.current) {
+                // Simple zoom: move toward wherever the crosshair is currently pointing
+                const currentPos = rigRef.current.position.clone()
+                const lookTarget = targetRef.current.clone()
 
-            // Calculate direction from camera to look target
-            const direction = lookTarget.clone().sub(currentPos).normalize()
+                // Calculate direction from camera to look target
+                const direction = lookTarget.clone().sub(currentPos).normalize()
 
-            // Fixed zoom distance - move 0.8 units toward the look target
-            const zoomDistance = 0.8
-            const newPos = currentPos.clone().add(direction.clone().multiplyScalar(zoomDistance))
+                // Fixed zoom distance - move 0.8 units toward the look target
+                const zoomDistance = 0.8
+                const newPos = currentPos.clone().add(direction.clone().multiplyScalar(zoomDistance))
 
-            console.log('=== Simple zoom toward crosshair ===')
-            console.log('Look target:', lookTarget)
-            console.log('New position:', newPos)
+                // Store the zoom position for later use
+                zoomPositionRef.current = {
+                    position: [newPos.x, newPos.y, newPos.z],
+                    lookAt: [lookTarget.x, lookTarget.y, lookTarget.z]
+                }
+            }
 
+            // Use stored zoom position
             targetConfig = {
-                position: [newPos.x, newPos.y, newPos.z],
-                lookAt: [lookTarget.x, lookTarget.y, lookTarget.z],
-                fov: 25 // Narrower FOV for zoom
+                position: zoomPositionRef.current.position,
+                lookAt: zoomPositionRef.current.lookAt,
+                fov: 25
+            }
+
+            // When rotated, override to flat overhead view
+            if (isRotated) {
+                const lookAt = zoomPositionRef.current.lookAt
+                targetConfig = {
+                    position: [lookAt[0], 1.6, lookAt[2]],  // Directly above look target
+                    lookAt: [lookAt[0], 0.85, lookAt[2]],   // Looking straight down
+                    fov: 30
+                }
             }
         } else if (cameraTarget === 'intro') {
             targetConfig = CAMERA_POSITIONS.intro
@@ -148,7 +172,8 @@ export default function CameraController() {
         const isTopDown = cameraTarget === 'photo'
         let targetUp = isTopDown ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 1, 0)
 
-        if (isRotated) {
+        // When rotated, use side-facing up vector
+        if (isRotated && cameraTarget === 'photo') {
             targetUp = new THREE.Vector3(-1, 0, 0)
         }
 
@@ -209,14 +234,18 @@ export default function CameraController() {
             currentMouseRef.current.x += (mouseOffsetRef.current.x - currentMouseRef.current.x) * MOUSE_LOOK.smoothing
             currentMouseRef.current.y += (mouseOffsetRef.current.y - currentMouseRef.current.y) * MOUSE_LOOK.smoothing
 
-            // Only apply FPS look when in overview or tray view (not during intro/entering)
-            const shouldLook = cameraTarget === 'overview' || cameraTarget.startsWith?.('tray') || lightsOn
+            // Always enable FPS look (including during intro/entering)
+            const shouldLook = true
 
             if (shouldLook) {
                 // Calculate look offset based on mouse (FPS style - looking where mouse points)
-                currentLookOffsetRef.current.x += ((currentMouseRef.current.x * MOUSE_LOOK.horizontalRange) - currentLookOffsetRef.current.x) * MOUSE_LOOK.smoothing
+                // When rotated, swap X and Y so mouse feels natural
+                const mouseX = isRotated ? currentMouseRef.current.y : currentMouseRef.current.x
+                const mouseY = isRotated ? -currentMouseRef.current.x : currentMouseRef.current.y
+
+                currentLookOffsetRef.current.x += ((mouseX * MOUSE_LOOK.horizontalRange) - currentLookOffsetRef.current.x) * MOUSE_LOOK.smoothing
                 // Negative Y because moving mouse down should look down
-                currentLookOffsetRef.current.y += ((-currentMouseRef.current.y * MOUSE_LOOK.verticalRange) - currentLookOffsetRef.current.y) * MOUSE_LOOK.smoothing
+                currentLookOffsetRef.current.y += ((-mouseY * MOUSE_LOOK.verticalRange) - currentLookOffsetRef.current.y) * MOUSE_LOOK.smoothing
 
                 // Apply mouse look offset to the base target
                 targetRef.current.x = baseTargetRef.current.x + currentLookOffsetRef.current.x

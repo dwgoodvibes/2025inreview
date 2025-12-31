@@ -50,33 +50,33 @@ export default function IntroText() {
             {/* Main intro line */}
             <Text
                 position={[0, 0.15, 0]}
-                fontSize={0.12}
+                fontSize={0.14}
                 color="#e8dcc8"
                 anchorX="center"
                 anchorY="middle"
-
+                font="https://raw.githubusercontent.com/google/fonts/main/ofl/sigmarone/SigmarOne-Regular.ttf"
                 maxWidth={3}
                 textAlign="center"
                 material-transparent={true}
                 material-opacity={0}
             >
-                Oh, it's time to reflect on 2025...
+                It's been a while...
             </Text>
 
-            {/* Second line - film developer theme */}
+            {/* Second line - contemplative */}
             <Text
-                position={[0, -0.1, 0]}
-                fontSize={0.08}
+                position={[0, -0.12, 0]}
+                fontSize={0.1}
                 color="#c4b8a8"
                 anchorX="center"
                 anchorY="middle"
-
+                font="https://raw.githubusercontent.com/google/fonts/main/ofl/sigmarone/SigmarOne-Regular.ttf"
                 maxWidth={3}
                 textAlign="center"
                 material-transparent={true}
                 material-opacity={0}
             >
-                Let me develop my film...
+                Let me remember.
             </Text>
         </group>
     )

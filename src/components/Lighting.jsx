@@ -13,7 +13,7 @@ export default function Lighting() {
     const isFlickering = useStore(state => state.isFlickering)
     const lightsOn = useStore(state => state.lightsOn)
     const cameraTarget = useStore(state => state.cameraTarget)
-    const isIntro = cameraTarget === 'intro'
+    const isIntro = cameraTarget === 'intro' || cameraTarget === 'entering'
 
     // Debug controls (remove in production)
     const { intensity, color, position } = useControls('Safe Light', {

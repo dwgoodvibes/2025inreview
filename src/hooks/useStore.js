@@ -80,35 +80,46 @@ const useStore = create((set, get) => ({
     sheets: [
         {
             id: 0,
-            category: 'Spring',
-            texture: 'sheets/summer_sheet.webp?v=5', // Using generated sheet for now
+            category: 'China',
+            texture: 'sheets/china.webp',
             photos: Array.from({ length: 10 }, (_, i) => ({
                 id: i,
-                title: `Spring Memory ${i + 1}`,
-                date: 'March 2024',
-                description: 'A beautiful moment captured in spring.'
+                title: `China Memory ${i + 1}`,
+                date: '2024',
+                description: 'Adventures in China.'
             }))
         },
         {
             id: 1,
-            category: 'Summer',
-            texture: 'sheets/summer_sheet.webp?v=5',
+            category: 'Wedding',
+            texture: 'sheets/wedding.webp',
             photos: Array.from({ length: 10 }, (_, i) => ({
                 id: i,
-                title: `Summer Adventure ${i + 1}`,
-                date: 'July 2024',
-                description: 'Sun-soaked days and warm nights.'
+                title: `Wedding Moment ${i + 1}`,
+                date: '2024',
+                description: 'Beautiful wedding memories.'
             }))
         },
         {
             id: 2,
-            category: 'Fall',
-            texture: 'sheets/summer_sheet.webp?v=5', // Using generated sheet for now
+            category: 'Europe',
+            texture: 'sheets/europe.webp',
             photos: Array.from({ length: 10 }, (_, i) => ({
                 id: i,
-                title: `Autumn Moment ${i + 1}`,
-                date: 'October 2024',
-                description: 'Golden leaves and crisp air.'
+                title: `Europe Adventure ${i + 1}`,
+                date: '2024',
+                description: 'Exploring Europe.'
+            }))
+        },
+        {
+            id: 3,
+            category: 'Family',
+            texture: 'sheets/family.webp',
+            photos: Array.from({ length: 10 }, (_, i) => ({
+                id: i,
+                title: `Family Moment ${i + 1}`,
+                date: '2024',
+                description: 'Precious family memories.'
             }))
         }
     ],

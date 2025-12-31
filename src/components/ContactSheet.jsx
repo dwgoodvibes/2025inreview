@@ -19,15 +19,16 @@ const SURFACE_Y = 0.045
 const FLOAT_Y = 0.065 // Raised strictly above water
 const DEEP_Y = 0.015
 
-// Custom shader for photo with blur capability
-// Adjusted to be less "glowing", more "paper" (matte)
+// Custom shader for photo with blur capability and development reveal
+// With subtle contrast boost to counteract ambient light wash-out
 const PhotoMaterial = shaderMaterial(
     {
         uTexture: null,
         uOpacity: 1.0,
         uBlurryness: 0.0,
         uTime: 0,
-        uHover: 0
+        uHover: 0,
+        uReveal: 0.0 // 0 = white paper, 1 = full color
     },
     // Vertex Shader
     `
@@ -50,13 +51,28 @@ const PhotoMaterial = shaderMaterial(
     uniform sampler2D uTexture;
     uniform float uOpacity;
     uniform float uBlurryness;
+    uniform float uReveal;
     
     varying vec2 vUv;
 
     void main() {
         vec4 texColor = texture2D(uTexture, vUv, uBlurryness);
-        // Matte Paper: No fancy effects, just the pixel color
-        gl_FragColor = vec4(texColor.rgb, uOpacity);
+        
+        // Reduce brightness to counteract ambient light wash-out
+        vec3 adjustedColor = texColor.rgb * .4;
+        
+        // Boost saturation to counteract desaturation
+        float luminance = dot(adjustedColor, vec3(0.299, 0.587, 0.114));
+        adjustedColor = mix(vec3(luminance), adjustedColor, 1.5); // 1.4 = 40% saturation boost
+        adjustedColor = clamp(adjustedColor, 0.0, 1.0);
+        
+        // Paper color: warm off-white (like photo paper)
+        vec3 paperColor = vec3(0.95, 0.93, 0.88);
+        
+        // Mix between paper and revealed photo
+        vec3 finalColor = mix(paperColor, adjustedColor, uReveal);
+        
+        gl_FragColor = vec4(finalColor, uOpacity);
     }
     `
 )
@@ -95,7 +111,44 @@ const ShadowMaterial = shaderMaterial(
     `
 )
 
-extend({ PhotoMaterial, ShadowMaterial })
+// Frame overlay shader with reveal effect
+const FrameMaterial = shaderMaterial(
+    {
+        uTexture: null,
+        uOpacity: 0.95,
+        uReveal: 0.0 // 0 = white paper, 1 = full color
+    },
+    // Vertex Shader
+    `
+    varying vec2 vUv;
+    void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+    `,
+    // Fragment Shader
+    `
+    uniform sampler2D uTexture;
+    uniform float uOpacity;
+    uniform float uReveal;
+    varying vec2 vUv;
+
+    void main() {
+        vec4 texColor = texture2D(uTexture, vUv);
+        
+        // Paper color for unrevealed state
+        vec3 paperColor = vec3(0.95, 0.93, 0.88);
+        
+        // Mix between paper and revealed frame
+        vec3 finalColor = mix(paperColor, texColor.rgb, uReveal);
+        
+        // Keep the alpha from the texture (for transparency in photo areas)
+        gl_FragColor = vec4(finalColor, texColor.a * uOpacity);
+    }
+    `
+)
+
+extend({ PhotoMaterial, ShadowMaterial, FrameMaterial })
 
 export default function ContactSheet({
     texture,
@@ -103,6 +156,7 @@ export default function ContactSheet({
 }) {
     const meshRef = useRef()
     const materialRef = useRef()
+    const frameMatRef = useRef() // Frame overlay material ref
     const shadowRef = useRef()
     const shadowMatRef = useRef()
 
@@ -114,6 +168,13 @@ export default function ContactSheet({
     const [textureUrl, setTextureUrl] = useState(texture)
     const [isTransitioning, setIsTransitioning] = useState(false)
     const opacityRef = useRef(1)
+
+    // Development animation state
+    // Phases: 'submerged' | 'developing' | 'revealed' | 'rising'
+    const [devPhase, setDevPhase] = useState('submerged') // Wait for user click
+    const revealRef = useRef(0) // 0 = white paper, 1 = full color
+    const devStartTimeRef = useRef(-1) // -1 = capture time on first frame
+    const shakeOffsetRef = useRef({ x: 0, z: 0, rot: 0 })
 
     // Preload and Texture Management
     const allSheets = useStore(state => state.sheets)
@@ -133,10 +194,16 @@ export default function ContactSheet({
         return tex
     }
 
-    // Handle texture fade
+    // Handle texture change (sheet switching)
+    // Reset to submerged and trigger fade + re-development
     useEffect(() => {
         if (texture === textureUrl) return
+        // Start fade out, then swap texture and re-develop
         setIsTransitioning(true)
+        setDevPhase('submerged')
+        revealRef.current = 0
+        devStartTimeRef.current = -1 // Reset timing for next development
+        setLifted(false)
     }, [texture, textureUrl])
 
     const activeTexture = getTexture(textureUrl)
@@ -147,30 +214,95 @@ export default function ContactSheet({
     // Base rotation for the sheet (90 degrees to fit tray)
     const BASE_ROTATION = Math.PI / 2
 
+    // Development animation timing constants
+    const SHAKE_DURATION = 2.0 // seconds
+    const REVEAL_DURATION = 3.0 // seconds
+    const SHAKE_INTENSITY = 0.003 // position shake
+    const SHAKE_ROT_INTENSITY = 0.02 // rotation shake
+
     // Main Frame Loop: Animation
     useFrame((state, delta) => {
         if (!meshRef.current || !materialRef.current) return
 
-        // --- Fade Logic ---
+        const time = state.clock.elapsedTime
+
+        // --- Fade Logic (texture swap) ---
         if (isTransitioning) {
             opacityRef.current = THREE.MathUtils.lerp(opacityRef.current, 0, delta * 8)
             if (opacityRef.current < 0.05) {
                 setTextureUrl(texture)
                 setIsTransitioning(false)
+                // After texture swap, start developing
+                setDevPhase('developing')
+                devStartTimeRef.current = time
             }
         } else {
             opacityRef.current = THREE.MathUtils.lerp(opacityRef.current, 1, delta * 8)
         }
 
+        // --- Development Phase Logic ---
+        if (devPhase === 'developing') {
+            // Capture time on first developing frame
+            if (devStartTimeRef.current < 0) {
+                devStartTimeRef.current = time
+            }
+            const elapsed = time - devStartTimeRef.current
+
+            // Shake animation (active during development)
+            const shakeFreq = 15
+            shakeOffsetRef.current = {
+                x: Math.sin(time * shakeFreq) * SHAKE_INTENSITY * Math.cos(time * shakeFreq * 0.7),
+                z: Math.cos(time * shakeFreq * 1.3) * SHAKE_INTENSITY * Math.sin(time * shakeFreq * 0.5),
+                rot: Math.sin(time * shakeFreq * 0.8) * SHAKE_ROT_INTENSITY
+            }
+
+            // Color reveal progress
+            const revealProgress = Math.min(elapsed / REVEAL_DURATION, 1)
+            revealRef.current = THREE.MathUtils.lerp(revealRef.current, revealProgress, delta * 3)
+
+            // Transition to revealed when colors are done
+            if (elapsed > REVEAL_DURATION + 0.5) {
+                setDevPhase('revealed')
+                shakeOffsetRef.current = { x: 0, z: 0, rot: 0 }
+            }
+        } else if (devPhase === 'revealed') {
+            // Colors done, sheet stays submerged until clicked
+            revealRef.current = THREE.MathUtils.lerp(revealRef.current, 1, delta * 5)
+            // Decay shake smoothly
+            shakeOffsetRef.current.x = THREE.MathUtils.lerp(shakeOffsetRef.current.x, 0, delta * 5)
+            shakeOffsetRef.current.z = THREE.MathUtils.lerp(shakeOffsetRef.current.z, 0, delta * 5)
+            shakeOffsetRef.current.rot = THREE.MathUtils.lerp(shakeOffsetRef.current.rot, 0, delta * 5)
+        } else if (devPhase === 'rising') {
+            // Sheet is rising to surface
+            revealRef.current = 1
+            shakeOffsetRef.current.x = THREE.MathUtils.lerp(shakeOffsetRef.current.x, 0, delta * 5)
+            shakeOffsetRef.current.z = THREE.MathUtils.lerp(shakeOffsetRef.current.z, 0, delta * 5)
+            shakeOffsetRef.current.rot = THREE.MathUtils.lerp(shakeOffsetRef.current.rot, 0, delta * 5)
+        } else {
+            // Submerged: white paper
+            revealRef.current = THREE.MathUtils.lerp(revealRef.current, 0, delta * 5)
+        }
+
         // --- Position Logic ---
-        const isFloating = cameraTarget === 'photo' || (cameraTarget === 'inspecting' && lifted)
+        // Only float if lifted AND development is complete
+        const canFloat = devPhase === 'revealed' || devPhase === 'rising'
+        const isFloating = (cameraTarget === 'photo' || (cameraTarget === 'inspecting' && lifted)) && canFloat
         const targetY = isFloating ? FLOAT_Y : DEEP_Y
+
+        // Update phase when we start rising
+        if (isFloating && devPhase === 'revealed') {
+            setDevPhase('rising')
+        }
 
         meshRef.current.position.y = THREE.MathUtils.lerp(
             meshRef.current.position.y,
             targetY,
             delta * 3.0
         )
+
+        // Apply shake offset to position
+        meshRef.current.position.x = shakeOffsetRef.current.x
+        meshRef.current.position.z = shakeOffsetRef.current.z
 
         const currentY = meshRef.current.position.y
 
@@ -195,21 +327,28 @@ export default function ContactSheet({
         }
 
         // --- Uniforms ---
-        materialRef.current.uTime = state.clock.elapsedTime
+        materialRef.current.uTime = time
         materialRef.current.uOpacity = opacityRef.current
+        materialRef.current.uReveal = revealRef.current
         materialRef.current.uHover = THREE.MathUtils.lerp(
             materialRef.current.uHover,
             hovered ? 1.0 : 0.0,
             delta * 4
         )
 
+        // Update frame material reveal
+        if (frameMatRef.current) {
+            frameMatRef.current.uReveal = revealRef.current
+        }
+
         // --- Rotation ---
+        const baseRotWithShake = BASE_ROTATION + shakeOffsetRef.current.rot
         if (hovered && isFloating) {
-            meshRef.current.rotation.z = BASE_ROTATION + Math.sin(state.clock.elapsedTime * 2) * 0.01
+            meshRef.current.rotation.z = baseRotWithShake + Math.sin(time * 2) * 0.01
         } else {
             meshRef.current.rotation.z = THREE.MathUtils.lerp(
                 meshRef.current.rotation.z,
-                BASE_ROTATION,
+                baseRotWithShake,
                 delta * 4
             )
         }
@@ -225,9 +364,14 @@ export default function ContactSheet({
             return
         }
 
-        // 2. If at tray but submerged, lift
+        // 2. If at tray but submerged, start development and lift
         if (cameraTarget === 'inspecting') {
             if (!lifted) {
+                // Trigger development animation if not already developing/revealed
+                if (devPhase === 'submerged') {
+                    setDevPhase('developing')
+                    devStartTimeRef.current = -1 // Will capture time on next frame
+                }
                 setLifted(true)
                 return
             }
@@ -337,21 +481,19 @@ export default function ContactSheet({
                         uOpacity={opacityRef.current}
                         transparent
                         side={THREE.DoubleSide}
+                        toneMapped={false}
                     />
                 </mesh>
 
                 {/* 2. PLASTIC SLEEVE OVERLAY (Frame) */}
                 <mesh position={[0, 0, 0.0005]} receiveShadow={false}>
                     <planeGeometry args={[SHEET_WIDTH, SHEET_HEIGHT]} />
-                    <meshPhysicalMaterial
-                        map={frameTexture}
-                        transparent={true}
-                        roughness={0.2} // Glossy plastic
-                        clearcoat={1.0} // extra shiny
-                        clearcoatRoughness={0.1}
-                        metalness={0.0}
-                        transmission={0} // Only alpha channel acts as window
-                        opacity={0.95}
+                    <frameMaterial
+                        ref={frameMatRef}
+                        uTexture={frameTexture}
+                        uOpacity={0.95}
+                        uReveal={revealRef.current}
+                        transparent
                         depthWrite={false}
                     />
                 </mesh>

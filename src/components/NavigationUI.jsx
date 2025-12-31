@@ -17,12 +17,31 @@ export default function NavigationUI() {
 
     return (
         <Html fullscreen style={{ pointerEvents: 'none' }}>
+            {/* Category label - separate from dots */}
+            <div
+                style={{
+                    position: 'fixed',
+                    bottom: '1rem',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    color: '#ffffff',
+                    fontFamily: 'Georgia, serif',
+                    fontSize: '0.75rem',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    pointerEvents: 'none',
+                    zIndex: 50
+                }}
+            >
+                {sheets[currentTray]?.category}
+            </div>
+
             {/* Navigation dots */}
             <nav
                 className="tray-navigation"
                 style={{
                     position: 'fixed',
-                    bottom: '2rem',
+                    bottom: '2.5rem',
                     left: '50%',
                     transform: 'translateX(-50%)',
                     display: 'flex',
@@ -41,33 +60,13 @@ export default function NavigationUI() {
                             width: '12px',
                             height: '12px',
                             borderRadius: '50%',
-                            background: i === currentTray ? '#ff5e00' : 'rgba(255, 94, 0, 0.3)',
+                            background: i === currentTray ? '#ffffff' : 'rgba(255, 255, 255, 0.3)',
                             border: 'none',
                             cursor: 'pointer',
                             transition: 'all 0.3s ease',
-                            boxShadow: i === currentTray ? '0 0 15px rgba(255, 94, 0, 0.6)' : 'none'
+                            boxShadow: i === currentTray ? '0 0 15px rgba(255, 255, 255, 0.6)' : 'none'
                         }}
-                    >
-                        <span
-                            className="nav-label"
-                            style={{
-                                position: 'absolute',
-                                bottom: '1.5rem',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                whiteSpace: 'nowrap',
-                                color: i === currentTray ? '#ff5e00' : 'rgba(255, 94, 0, 0.5)',
-                                fontFamily: 'Georgia, serif',
-                                fontSize: '0.75rem',
-                                letterSpacing: '0.1em',
-                                textTransform: 'uppercase',
-                                opacity: i === currentTray ? 1 : 0,
-                                transition: 'opacity 0.3s ease'
-                            }}
-                        >
-                            {sheet.category}
-                        </span>
-                    </button>
+                    />
                 ))}
             </nav>
 
